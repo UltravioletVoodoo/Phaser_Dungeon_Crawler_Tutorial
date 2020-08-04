@@ -24,12 +24,20 @@ export default class Game extends Phaser.Scene {
     create() {
         createFaunaAnims(this.anims)
         createSkeletonAnims(this.anims)
+        this.skeletons = this.physics.add.group({
+            classType: Skeleton
+        })
 
         const map = this.make.tilemap({ key: 'dungeon' })
         const tileset = map.addTilesetImage('dungeon', 'tiles', 16, 16, 1, 2)
 
         map.createStaticLayer('floor', tileset)
         map.createStaticLayer('upWalls', tileset)
+        this.skeletons.get(200, 100, 'skeleton')
+        this.skeletons.get(200, 125, 'skeleton')
+        this.skeletons.get(250, 100, 'skeleton')
+        this.skeletons.get(225, 100, 'skeleton')
+
         this.fauna = this.physics.add.sprite(200, 350, 'fauna', 'walk-down-3.png')
         map.createStaticLayer('downWalls', tileset)
         map.createStaticLayer('sideWalls', tileset)
@@ -45,25 +53,19 @@ export default class Game extends Phaser.Scene {
         this.fauna.anims.play('fauna-idle-down')
 
         this.physics.add.collider(this.fauna, collisionLayer)
+        this.physics.add.collider(this.skeletons, this.skeletons)
 
         this.cameras.main.startFollow(this.fauna, true)
 
-        this.skeletons = this.physics.add.group({
-            classType: Skeleton
-        })
 
-        this.skeletons.get(200, 100, 'skeleton')
+        this.physics.add.collider(this.skeletons, collisionLayer)
     }
 
     update() {
         if (!this.cursors || !this.fauna || !this.skeletons) return
 
-        // Handle crazy-pathing
-        const distance = getDistance(this.skeletons.children.entries[0], this.fauna)
-        if (distance < 50) {
-            let velocity = getVelocity(getDirection(this.skeletons.children.entries[0], this.fauna), 50)
-            this.skeletons.children.entries[0].setVelocity(velocity.x, velocity.y)
-        }
+        this.skeletons.children.entries.map((skeleton) => skeleton.chaseCharacter(this.fauna))
+
 
         const speed = 100
 
