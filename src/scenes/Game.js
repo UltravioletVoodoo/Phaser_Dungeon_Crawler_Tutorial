@@ -1,10 +1,17 @@
 import Phaser from 'phaser'
 import { debugDraw } from '../utils/debug'
+import { createSkeletonAnims } from '../anims/enemyAnims'
+import { createFaunaAnims } from '../anims/characterAnims'
+import Skeleton from '../enemies/skeleton'
+import getDirection from '../utils/getDirection'
+import getDistance from '../utils/getDistance'
+import getVelocity from '../utils/getVelocity'
 
 export default class Game extends Phaser.Scene {
 
     cursors
     fauna
+    skeletons
 
 	constructor() {
 		super('game')
@@ -15,6 +22,9 @@ export default class Game extends Phaser.Scene {
     }
 
     create() {
+        createFaunaAnims(this.anims)
+        createSkeletonAnims(this.anims)
+
         const map = this.make.tilemap({ key: 'dungeon' })
         const tileset = map.addTilesetImage('dungeon', 'tiles', 16, 16, 1, 2)
 
@@ -29,55 +39,31 @@ export default class Game extends Phaser.Scene {
         collisionLayer.setCollisionByProperty({ collides: true })
 
 
-        debugDraw(collisionLayer, this, {red: 255, green: 255, blue: 0}) // Debug layers with collision
+        // debugDraw(collisionLayer, this, {red: 255, green: 255, blue: 0}) // Debug layers with collision
 
-
-
-        this.anims.create({
-            key: 'fauna-idle-down',
-            frames: [{ key: 'fauna', frame: 'walk-down-3.png' }]
-        })
-
-        this.anims.create({
-            key: 'fauna-idle-up',
-            frames: [{ key: 'fauna', frame: 'walk-up-3.png' }]
-        })
-
-        this.anims.create({
-            key: 'fauna-idle-side',
-            frames: [{ key: 'fauna', frame: 'walk-side-3.png' }]
-        })
-
-        this.anims.create({
-            key: 'fauna-run-down',
-            frames: this.anims.generateFrameNames('fauna', { start: 1, end: 8, prefix: 'run-down-', suffix: '.png' }),
-            repeat: -1,
-            frameRate: 15
-        })
-
-        this.anims.create({
-            key: 'fauna-run-up',
-            frames: this.anims.generateFrameNames('fauna', { start: 1, end: 8, prefix: 'run-up-', suffix: '.png' }),
-            repeat: -1,
-            frameRate: 15
-        })
-
-        this.anims.create({
-            key: 'fauna-run-side',
-            frames: this.anims.generateFrameNames('fauna', { start: 1, end: 8, prefix: 'run-side-', suffix: '.png' }),
-            repeat: -1,
-            frameRate: 15
-        })
 
         this.fauna.anims.play('fauna-idle-down')
 
         this.physics.add.collider(this.fauna, collisionLayer)
 
         this.cameras.main.startFollow(this.fauna, true)
+
+        this.skeletons = this.physics.add.group({
+            classType: Skeleton
+        })
+
+        this.skeletons.get(200, 100, 'skeleton')
     }
 
     update() {
-        if (!this.cursors || !this.fauna) return
+        if (!this.cursors || !this.fauna || !this.skeletons) return
+
+        // Handle crazy-pathing
+        const distance = getDistance(this.skeletons.children.entries[0], this.fauna)
+        if (distance < 50) {
+            let velocity = getVelocity(getDirection(this.skeletons.children.entries[0], this.fauna), 50)
+            this.skeletons.children.entries[0].setVelocity(velocity.x, velocity.y)
+        }
 
         const speed = 100
 
